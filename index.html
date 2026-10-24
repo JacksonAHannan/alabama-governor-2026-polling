@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Explore two modeled Alabama governor polling scenarios by county, precinct, State House district, and State Senate district. A hypothetical model based on polling available October 24, 2026.">
+  <meta name="theme-color" content="#ffffff">
+  <title>Alabama Governor 2026 according to current polling</title>
+  <link rel="stylesheet" href="vendor/leaflet.css">
+  <link rel="stylesheet" href="style.css">
+  <script src="vendor/leaflet.js" defer></script>
+  <script src="app.js" type="module"></script>
+</head>
+<body>
+  <a class="skip-link" href="#explore">Skip to the interactive map</a>
+  <main class="page">
+    <header class="masthead">
+      <h1>Alabama Governor 2026 according to current polling</h1>
+      <p class="standfirst">Explore how a statewide polling average could translate into local support for Doug Jones and Tommy Tuberville.</p>
+      <p class="edition">Hypothetical two-party model <span aria-hidden="true">·</span> Polling snapshot: <time datetime="2026-10-24">October 24, 2026</time></p>
+    </header>
+
+    <section class="statewide" aria-labelledby="statewide-heading">
+      <h2 id="statewide-heading">Statewide estimate</h2>
+      <div class="statewide-result jones">
+        <span class="candidate-name">Doug Jones <span class="party">Dem.</span></span>
+        <strong id="statewide-jones" class="statewide-share">—</strong>
+      </div>
+      <div class="statewide-result tuberville">
+        <span class="candidate-name">Tommy Tuberville <span class="party">Rep.</span></span>
+        <strong id="statewide-tuberville" class="statewide-share">—</strong>
+      </div>
+      <div class="district-totals">
+        <p><span class="district-label">House districts carried</span><span id="house-counts">—</span></p>
+        <p><span class="district-label">Senate districts carried</span><span id="senate-counts">—</span></p>
+      </div>
+    </section>
+
+    <section id="explore" class="explorer" aria-label="Explore the modeled election map">
+      <div class="controls">
+        <fieldset class="scenario-control">
+          <legend>Allocate undecided voters</legend>
+          <div class="scenario-buttons" role="group" aria-label="Undecided voter allocation">
+            <button id="scenario-proportional" type="button" data-scenario="proportional" aria-pressed="true">Proportionally</button>
+            <button id="scenario-equal" type="button" data-scenario="equal" aria-pressed="false">Split equally</button>
+          </div>
+        </fieldset>
+        <div class="geography-control">
+          <label for="geography">Map by</label>
+          <select id="geography">
+            <option value="county" selected>County</option>
+            <option value="precinct">Precinct</option>
+            <option value="house">State House district</option>
+            <option value="senate">State Senate district</option>
+          </select>
+        </div>
+        <div class="search-control">
+          <label for="search">Find a county, precinct, or district</label>
+          <input id="search" type="search" autocomplete="off" placeholder="Search Alabama" aria-controls="search-results" aria-describedby="search-status">
+          <div id="search-results" class="search-results" aria-label="Search results"></div>
+          <p id="search-status" class="search-status" role="status" aria-live="polite"></p>
+        </div>
+      </div>
+
+      <div class="map-heading">
+        <div>
+          <h2 id="view-title">County estimates</h2>
+          <p id="view-description">Select a county to inspect its estimate and explore its precincts.</p>
+        </div>
+        <button id="reset-map" class="text-button" type="button">Reset map</button>
+      </div>
+      <nav id="breadcrumb" class="breadcrumb" aria-label="Map location"></nav>
+
+      <div class="map-layout">
+        <div class="map-column">
+          <div class="map-frame">
+            <div id="map" role="region" aria-label="Interactive Alabama governor estimate map"></div>
+            <p id="map-status" class="map-status" role="status" aria-live="polite">Loading the map and modeled estimates…</p>
+          </div>
+          <div id="legend" class="legend" aria-label="Map color legend"></div>
+          <p class="map-note">Colors show the estimated winner and lead in percentage points. Gray marks areas with no modeled vote weight. Search offers a keyboard-accessible way to inspect every area.</p>
+          <p class="map-note">This map was created using data from the <a href="https://redistrictingdatahub.org/">Redistricting Data Hub</a>.</p>
+        </div>
+
+        <aside class="inspection" aria-labelledby="selection-title">
+          <h2 id="selection-title">Explore Alabama</h2>
+          <p id="selection-subtitle" class="selection-subtitle">County estimates</p>
+          <div id="selection-results" class="selection-results">
+            <p class="selection-instruction">Select an area on the map or use search to see candidate support and the estimated margin.</p>
+          </div>
+          <div id="selection-context" class="selection-context"></div>
+          <div class="selection-actions">
+            <button id="drill-down" type="button" hidden>Explore precincts</button>
+            <button id="clear-selection" class="text-button" type="button" hidden>Clear selection</button>
+          </div>
+          <div class="inspection-note">
+            <h3>What these estimates mean</h3>
+            <p>These are modeled governor results, not reported votes or district polls. House and Senate counts show districts carried in the governor’s race, not predicted legislative winners.</p>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <section class="methods" aria-labelledby="methods-heading">
+      <div class="methods-introduction">
+        <h2 id="methods-heading">How to read this model</h2>
+        <p class="limitation"><strong>A material limitation:</strong> modeled Jones support among voters aged 18–29 is about 51%, compared with 75–77% in the source poll after undecided allocation. The maps give substantial weight to historical local voting patterns.</p>
+      </div>
+      <div class="methods-copy">
+        <p>Three unique polls set the statewide average. Census demographics, 2024 presidential results, Jones’s local 2020 crossover support, and a limited adjustment for May primary voting distribute that support geographically. The statewide result is matched exactly; demographic and regional polling are softer constraints.</p>
+        <p>Switch between allocating undecideds in proportion to existing candidate support and splitting them equally. Both scenarios exclude other-candidate and explicitly nonvoting responses. The geographic weights follow 2024 turnout; displayed vote weights are not a forecast of how many people will vote in 2026.</p>
+        <details id="methodology">
+          <summary>Sources and model assumptions</summary>
+          <p>The statewide average weights the Cygnal, Lowry, and Napolitan surveys by sample size. Numeric demographic and regional polling targets come from Cygnal. Education polarization is estimated from historical voting evidence rather than a 2026 gubernatorial education crosstab.</p>
+          <p>The model treats race, age, and education population estimates as proxies for the electorate. Precinct splits are allocated by Census block voting-age population. Local estimates are not independent observations, and map colors do not show uncertainty.</p>
+          <ul class="source-list">
+            <li><a href="https://aldailynews.com/adn-gray-tv-poll-jones-vs-tuberville-for-governor/">Alabama Daily News / Gray Television: Cygnal poll</a></li>
+            <li><a href="https://www.al.com/politics/2026/10/gop-faces-election-downturn-but-theres-no-blue-wave-for-alabama-democrats-poll-shows.html">AL.com: October Lowry poll coverage</a></li>
+            <li><a href="https://www.al.com/politics/2026/09/new-poll-offers-some-good-news-for-alabamas-republican-politicians.html">AL.com: September Napolitan poll coverage</a></li>
+          </ul>
+          <p><a href="methodology.html">Read the complete methodology and assumptions</a></p>
+        </details>
+      </div>
+    </section>
+
+    <footer class="page-footer">
+      <p>Polling snapshot of October 24, 2026. This page does not update automatically.</p>
+      <nav aria-label="Data and documentation">
+        <a href="methodology.html">Methodology</a>
+        <a id="download-data" href="data/model.json" download>Download model data</a>
+      </nav>
+    </footer>
+  </main>
+  <noscript><p class="noscript">JavaScript is needed to explore the map. You can still read the <a href="methodology.html">methodology</a> or <a href="data/model.json">download the model data</a>.</p></noscript>
+</body>
+</html>
