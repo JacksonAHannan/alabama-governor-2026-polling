@@ -30,9 +30,27 @@ export function unitLabel(geography, unit) {
   return unit.name;
 }
 
-export function matchesParent(unit, parent) {
+// A legislative portion is preallocated and clipped by the exporter. Never
+// substitute a whole precinct if a requested portion is absent.
+export function precinctPortion(model, parent, id) {
+  if (!parent || !['house', 'senate'].includes(parent.layer)) return null;
+  const districts = model.district_precincts?.[parent.layer];
+  if (!Object.hasOwn(districts ?? {}, parent.id)) return null;
+  const precincts = districts[parent.id];
+  return Object.hasOwn(precincts ?? {}, id) ? precincts[id] ?? null : null;
+}
+
+export function resultsForUnit(model, layer, id, scenario, parent = null) {
+  if (!Object.hasOwn(model.units[layer] ?? {}, id)) return null;
+  const source = layer === 'precinct' && parent && ['house', 'senate'].includes(parent.layer)
+    ? precinctPortion(model, parent, id) : model.units[layer][id];
+  return Object.hasOwn(source?.results ?? {}, scenario) ? source.results[scenario] : null;
+}
+
+export function matchesParent(unit, parent, model = null) {
   if (!parent) return true;
   if (parent.layer === 'county') return unit.county_fips === parent.id;
+  if (model) return precinctPortion(model, parent, unit.id) !== null;
   return (unit.membership?.[parent.layer] ?? []).some(entry => entry.id === parent.id && entry.weight > 0);
 }
 
@@ -47,7 +65,7 @@ export function parseState(model, fragment) {
     ? {layer: parentParts[0], id: parentParts[1]} : null;
   const id = parameters.get('unit');
   const record = Object.hasOwn(model.units[layer] ?? {}, id) ? model.units[layer][id] : null;
-  const unit = record && (layer !== 'precinct' || matchesParent(record, parent)) ? id : null;
+  const unit = record && (layer !== 'precinct' || matchesParent(record, parent, model)) ? id : null;
   return {scenario, layer, parent, unit};
 }
 

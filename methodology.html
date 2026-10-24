@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Methodology | Alabama Governor 2026 according to current polling</title>
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css?v=20261024-vap-clipped">
 </head>
 <body><main class="document">
   <a href="./">Back to the interactive map</a>
@@ -43,7 +43,9 @@
   <p>Historical broadcaster county lists approximate Birmingham, Huntsville, Montgomery, and Mobile markets because the poll’s exact 2026 membership was unavailable. Other areas, including Dothan, retain a separate unobserved category. The Huntsville proxy contains Colbert, DeKalb, Franklin, Jackson, Lauderdale, Lawrence, Limestone, Madison, Marshall, and Morgan counties; it is much larger than Huntsville city or Madison County.</p>
   <h2>Districts, precinct boundaries, and map display</h2>
   <p>The model covers 1,947 2024 reporting precincts, 67 counties, and the 105 House and 35 Senate districts in the 2021 adopted plans. Historical and primary votes are transferred using 2020 Census block voting-age population, conserving source totals while assuming population-proportional preferences within source precincts. Precincts split between legislative districts use the same population allocation. The district totals are estimates, not official district canvasses.</p>
-  <p>Drilling into a district displays every intersecting precinct in full. A displayed whole-precinct share can differ from the unobserved share in the part inside that district. The black outline shows the district boundary; the panel discloses this allocation assumption. Search and direct links can inspect any precinct. Fort Rucker’s zero 2024 vote weight stays unavailable rather than becoming 0% support.</p>
+  <p>Drilling into a House or Senate district displays only the portion of each allocated precinct inside that district. Display shapes are intersected with the same district boundary shown on the map, so excess precinct geometry is clipped away. Voting-age population (VAP) is the population aged 18 or older. Each portion uses its actual 2020 block-VAP count from the existing precinct-to-district crosswalk, divided by the precinct’s total block VAP. Physical land area is not used as a vote-allocation weight.</p>
+  <p>Each candidate’s modeled precinct vote weight is multiplied by that VAP fraction. The allocated portions sum to the existing district totals in both scenarios. Because both candidates receive the same fraction, candidate percentages and margins retain the model’s assumption of uniform preferences within a precinct. These are 2024 turnout-weight units, not measured ballots or a prediction of 2026 turnout. The panel shows the portion’s VAP and allocated weights. Historical comparisons and demographic percentages remain explicitly labeled whole-precinct context; clipping does not create new observations about individual blocks.</p>
+  <p>Search, map selection and shared links preserve the selected district and clipped precinct portion. The standalone statewide precinct view continues to show whole precincts. Fort Rucker’s zero 2024 vote weight stays unavailable rather than becoming 0% support.</p>
   <p>District counts indicate modeled governor-vote leads above 50%, not actual legislative election winners. The browser reads the existing results and performs no model fitting. Shared-arc display geometry is simplified at a 50-meter interval and rounded to six decimal degrees, with documented tiny validity repairs; vote estimates are unchanged. Seven ten-point winner-margin color bins match the static maps, with the darkest bin at 60 points or more. Colors do not display uncertainty.</p>
   <h2>Uncertainty and sensitivity</h2>
   <p>This is a deterministic snapshot conditional on the pooled statewide result. It does not simulate polling error, correlated local errors, demographic measurement uncertainty, changed turnout, campaign developments, or legislative candidates. The supplied surveys and historical data do not uniquely identify individual voting behavior.</p>
@@ -58,7 +60,7 @@
     <li><a href="https://api.census.gov/data/2024/acs/acs5.html">Census ACS 2024 five-year estimates</a>; <a href="https://www.census.gov/programs-surveys/decennial-census/about/voting-rights/cvap.2023.html">2023 citizen voting-age population estimates</a></li>
     <li><a href="https://al-ba.com/members/al_dma.pdf">Historical Alabama broadcaster market definitions</a></li>
     <li><a href="data/model.json" download>Modeled shares, history, demographic proxies, and district memberships</a>; <a href="data/provenance.json">source hashes and geometry processing</a></li>
-    <li>Display geometry: <a href="data/precinct.geojson">precincts</a>, <a href="data/county.geojson">counties</a>, <a href="data/house.geojson">House</a>, <a href="data/senate.geojson">Senate</a></li>
+    <li>Display geometry: <a href="data/precinct.geojson">precincts</a>, <a href="data/county.geojson">counties</a>, <a href="data/house.geojson">House</a>, <a href="data/senate.geojson">Senate</a>; district-clipped precinct portions: <a href="data/house-precincts.geojson">House</a>, <a href="data/senate-precincts.geojson">Senate</a></li>
   </ul>
   <p>This map was created using data from the Redistricting Data Hub. Historical election results and precinct geometry are derived from its Alabama datasets. See <a href="ATTRIBUTION.md">data and software attribution</a>.</p>
 </main></body>

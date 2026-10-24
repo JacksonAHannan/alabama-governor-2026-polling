@@ -7,9 +7,9 @@
   <meta name="theme-color" content="#ffffff">
   <title>Alabama Governor 2026 according to current polling</title>
   <link rel="stylesheet" href="vendor/leaflet.css">
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css?v=20261024-vap-clipped">
   <script src="vendor/leaflet.js" defer></script>
-  <script src="app.js" type="module"></script>
+  <script src="app.js?v=20261024-vap-clipped" type="module"></script>
 </head>
 <body>
   <a class="skip-link" href="#explore">Skip to the interactive map</a>
@@ -112,7 +112,7 @@
         <details id="methodology">
           <summary>Sources and model assumptions</summary>
           <p>The statewide average weights the Cygnal, Lowry, and Napolitan surveys by sample size. Numeric demographic and regional polling targets come from Cygnal. Education polarization is estimated from historical voting evidence rather than a 2026 gubernatorial education crosstab.</p>
-          <p>The model treats race, age, and education population estimates as proxies for the electorate. Precinct splits are allocated by Census block voting-age population. Local estimates are not independent observations, and map colors do not show uncertainty.</p>
+          <p>The model treats race, age, and education population estimates as proxies for the electorate. In legislative drilldown, precinct shapes are clipped to the district and each candidate’s modeled vote weight is scaled by the share of the precinct’s 2020 block voting-age population inside it. Candidate percentages assume uniform preferences within a precinct. Local estimates are not independent observations, and map colors do not show uncertainty.</p>
           <ul class="source-list">
             <li><a href="https://aldailynews.com/adn-gray-tv-poll-jones-vs-tuberville-for-governor/">Alabama Daily News / Gray Television: Cygnal poll</a></li>
             <li><a href="https://www.al.com/politics/2026/10/gop-faces-election-downturn-but-theres-no-blue-wave-for-alabama-democrats-poll-shows.html">AL.com: October Lowry poll coverage</a></li>

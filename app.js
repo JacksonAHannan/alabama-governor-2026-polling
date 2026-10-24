@@ -1,7 +1,8 @@
 import {
   GEOGRAPHIES, formatPercent, escapeHTML, marginLabel, marginColor,
-  unitLabel, matchesParent, parseState, stateFragment, searchIndex, findMatches,
-} from './model.mjs';
+  unitLabel, matchesParent, precinctPortion, resultsForUnit,
+  parseState, stateFragment, searchIndex, findMatches,
+} from './model.mjs?v=20261024-vap-clipped';
 
 const $ = selector => document.querySelector(selector);
 const mapElement = $('#map');
@@ -11,9 +12,21 @@ let model, state, map, index, featureGroup, parentOutline;
 let renderVersion = 0;
 let matches = [];
 let activeSearch = -1;
+const weightFormatter = new Intl.NumberFormat('en-US', {minimumFractionDigits: 1, maximumFractionDigits: 1});
+const populationFormatter = new Intl.NumberFormat('en-US', {maximumFractionDigits: 0});
+const formatWeight = value => Number.isFinite(value) ? weightFormatter.format(value) : 'Unavailable';
+const formatPopulation = value => Number.isFinite(value) ? populationFormatter.format(value) : 'Unavailable';
+
+function clippedContext() {
+  return state.layer === 'precinct' && ['house', 'senate'].includes(state.parent?.layer);
+}
+
+function currentResult(unit, layer = state.layer) {
+  return resultsForUnit(model, layer, unit.id, state.scenario, state.parent);
+}
 
 async function getJSON(path) {
-  const response = await fetch(path);
+  const response = await fetch(path, {cache: 'no-cache'});
   if (!response.ok) throw new Error(`The file ${path} could not be loaded (${response.status}).`);
   return response.json();
 }
@@ -58,7 +71,7 @@ function transition(next, fit = 'preserve') {
 function selectUnit(layer, id) {
   const unit = Object.hasOwn(model.units[layer] ?? {}, id) ? model.units[layer][id] : null;
   if (!unit) return;
-  const parent = layer === 'precinct' && matchesParent(unit, state.parent) ? state.parent : null;
+  const parent = layer === 'precinct' && matchesParent(unit, state.parent, model) ? state.parent : null;
   transition({layer, unit: id, parent}, 'unit');
 }
 
@@ -81,14 +94,13 @@ function breadcrumb() {
   $('#breadcrumb').innerHTML = parts.join('');
 }
 
-function resultRows(unit) {
-  const result = unit.results[state.scenario];
-  if (!Number.isFinite(result.jones_share)) {
-    return '<p>No modeled estimate: this precinct has no 2024 two-party vote weight.</p>';
-  }
-  return `<div class="result-row"><span>Doug Jones <small>Democrat</small></span><strong class="jones-text">${formatPercent(result.jones_share)}</strong></div>
-    <div class="result-row"><span>Tommy Tuberville <small>Republican</small></span><strong class="tuberville-text">${formatPercent(result.tuberville_share)}</strong></div>
-    <p class="selection-margin">${marginLabel(result.margin)}</p>`;
+function resultRows(unit, layer = state.layer) {
+  const result = currentResult(unit, layer);
+  if (!result) return '<p>No modeled estimate is available for this area.</p>';
+  return `<div class="result-row"><span>Doug Jones <small>Democrat</small></span><span class="result-numbers"><strong class="jones-text">${formatPercent(result.jones_share)}</strong><small><span id="selection-jones-weight" data-value="${result.jones_vote_weight}">${formatWeight(result.jones_vote_weight)}</span> weight units</small></span></div>
+    <div class="result-row"><span>Tommy Tuberville <small>Republican</small></span><span class="result-numbers"><strong class="tuberville-text">${formatPercent(result.tuberville_share)}</strong><small><span id="selection-tuberville-weight" data-value="${result.tuberville_vote_weight}">${formatWeight(result.tuberville_vote_weight)}</span> weight units</small></span></div>
+    <p class="selection-margin">${marginLabel(result.margin)}</p>
+    <p class="vote-weight-note">Modeled vote weights follow 2024 turnout. They are not predicted 2026 vote counts.</p>`;
 }
 
 function inspection() {
@@ -96,26 +108,32 @@ function inspection() {
   $('#selection-title').textContent = unit ? unitLabel(state.layer, unit)
     : state.parent ? unitLabel(state.parent.layer, parentUnit()) : 'Explore Alabama';
   $('#selection-subtitle').textContent = unit
-    ? state.layer === 'precinct' ? 'Whole-precinct modeled governor vote' : 'Modeled governor vote'
-    : state.parent ? 'Select a precinct to inspect its estimate.' : 'Select an area or use search.';
+    ? state.layer === 'precinct' ? clippedContext() ? 'Clipped precinct portion · modeled governor vote' : 'Whole-precinct modeled governor vote' : 'Modeled governor vote'
+    : state.parent ? 'District total; select a precinct portion to inspect its estimate.' : 'Select an area or use search.';
+  if (!unit && state.parent?.layer === 'county') $('#selection-subtitle').textContent = 'County total; select a precinct to inspect its estimate.';
   $('#selection-results').innerHTML = unit ? resultRows(unit)
-    : state.parent ? resultRows(parentUnit())
+    : state.parent ? resultRows(parentUnit(), state.parent.layer)
     : '<p class="selection-instruction">Select an area on the map or use search to inspect candidate support. Counties and legislative districts can be explored by precinct.</p>';
   const notes = [];
-  if (state.parent && state.parent.layer !== 'county') {
-    notes.push('<p class="boundary-note"><strong>Whole precincts shown.</strong> Some precincts cross the district boundary. Their displayed shares describe the entire precinct; the district total uses Census block population to allocate the split portions.</p>');
+  if (clippedContext()) {
+    notes.push(`<p class="boundary-note"><strong>Precincts clipped to ${escapeHTML(unitLabel(state.parent.layer, parentUnit()))}.</strong> Candidate vote weights use the portion’s share of each precinct’s 2020 voting-age population. Both candidates receive the same fraction, so support percentages retain the whole-precinct assumption.</p>`);
+    const portion = unit && precinctPortion(model, state.parent, unit.id);
+    if (portion) notes.push(`<h3>Precinct portion in this district</h3><dl class="context-list portion-context">
+      <dt>2020 voting-age population inside</dt><dd id="portion-vap" data-value="${portion.vap}">${formatPopulation(portion.vap)}</dd>
+      <dt>Whole-precinct voting-age population</dt><dd id="portion-precinct-vap" data-value="${portion.precinct_vap}">${formatPopulation(portion.precinct_vap)}</dd>
+      <dt>Share allocated to this district</dt><dd id="portion-allocation-weight" data-value="${portion.allocation_weight}">${formatPercent(portion.allocation_weight)}</dd></dl>`);
   }
   if (unit && state.layer === 'precinct') {
     const demographics = unit.demographics;
     if (demographics) {
-      notes.push(`<h3>Population context</h3><dl class="context-list">
+      notes.push(`<h3>Whole-precinct population context</h3><dl class="context-list">
         <dt>Black citizen adults</dt><dd>${formatPercent(demographics.black_share)}</dd>
         <dt>White citizen adults</dt><dd>${formatPercent(demographics.white_share)}</dd>
         <dt>BA+ among white adults 25+</dt><dd>${formatPercent(demographics.white_college_share)}</dd></dl>
         <p>Resident population proxies, not measured voter composition.</p>`);
     }
     if (unit.history) {
-      notes.push(`<h3>Historical comparisons</h3><dl class="context-list">
+      notes.push(`<h3>Whole-precinct historical comparisons</h3><dl class="context-list">
         <dt>Jones, 2020 Senate</dt><dd>${formatPercent(unit.history.jones2020_share)}</dd>
         <dt>Harris, 2024 president</dt><dd>${formatPercent(unit.history.harris2024_share)}</dd>
         <dt>Jones, May nominee vote</dt><dd>${formatPercent(unit.history.may_jones_share)}</dd></dl>
@@ -147,7 +165,7 @@ function summary() {
   $('#geography').value = state.layer;
   $('#view-title').textContent = state.parent ? `Precincts in ${unitLabel(state.parent.layer, parentUnit())}` : `${GEOGRAPHIES[state.layer].singular} estimates`;
   $('#view-description').textContent = state.layer === 'precinct'
-    ? 'Select a precinct for modeled support, historical voting, and demographic context.'
+    ? clippedContext() ? 'Precinct portions clipped to the district; modeled vote weights are allocated by voting-age population.' : 'Select a precinct for modeled support, historical voting, and demographic context.'
     : 'Select an area to inspect its estimate, then explore its precincts.';
   breadcrumb();
   inspection();
@@ -166,9 +184,10 @@ async function render(fit = 'preserve') {
   statusElement.textContent = 'Loading map…';
   summary();
   const layer = state.layer;
+  const geometryLayer = clippedContext() ? `${state.parent.layer}-precincts` : layer;
   let data, contextData;
   try {
-    [data, contextData] = await Promise.all([geometry(layer), state.parent ? geometry(state.parent.layer) : null]);
+    [data, contextData] = await Promise.all([geometry(geometryLayer), state.parent ? geometry(state.parent.layer) : null]);
   } catch (error) {
     // A failed request for a view the reader has left cannot invalidate the
     // newer, successfully loaded layer.
@@ -178,21 +197,27 @@ async function render(fit = 'preserve') {
   if (version !== renderVersion) return;
   if (featureGroup) map.removeLayer(featureGroup);
   if (parentOutline) map.removeLayer(parentOutline);
-  const visible = data.features.filter(feature => layer !== 'precinct' || matchesParent(model.units.precinct[feature.properties.id], state.parent));
+  const visible = data.features.filter(feature => layer !== 'precinct'
+    || (clippedContext() ? feature.properties.district_id === state.parent.id
+      && matchesParent(model.units.precinct[feature.properties.id], state.parent, model)
+      : matchesParent(model.units.precinct[feature.properties.id], state.parent, model)));
   featureGroup = L.geoJSON({type: 'FeatureCollection', features: visible}, {
     smoothFactor: 0,
     style(feature) {
       const unit = model.units[layer][feature.properties.id];
       const selected = state.unit === unit.id;
       return {
-        fillColor: marginColor(model.palette, unit.results[state.scenario].margin), fillOpacity: 1,
+        fillColor: marginColor(model.palette, currentResult(unit)?.margin), fillOpacity: 1,
         color: selected ? '#202020' : '#777777', weight: selected ? 2 : layer === 'precinct' ? .32 : .6,
         opacity: selected ? 1 : .7,
       };
     },
     onEachFeature(feature, featureLayer) {
       const unit = model.units[layer][feature.properties.id];
-      featureLayer.bindTooltip(`<strong>${escapeHTML(unitLabel(layer, unit))}</strong><br>${marginLabel(unit.results[state.scenario].margin)}`, {sticky: true, opacity: 1});
+      const result = currentResult(unit);
+      const portionLabel = clippedContext() ? '<br>Clipped precinct portion' : '';
+      const weights = clippedContext() && result ? `<br>Jones ${formatWeight(result.jones_vote_weight)} / Tuberville ${formatWeight(result.tuberville_vote_weight)} modeled weight units` : '';
+      featureLayer.bindTooltip(`<strong>${escapeHTML(unitLabel(layer, unit))}</strong>${portionLabel}<br>${marginLabel(result?.margin)}${weights}`, {sticky: true, opacity: 1});
       featureLayer.on('click', event => {
         L.DomEvent.stopPropagation(event);
         selectUnit(layer, unit.id);
@@ -203,7 +228,11 @@ async function render(fit = 'preserve') {
     const unit = model.units[layer][featureLayer.feature.properties.id];
     const element = featureLayer.getElement();
     element.dataset.unitId = unit.id;
-    element.setAttribute('aria-label', `${unitLabel(layer, unit)}: ${marginLabel(unit.results[state.scenario].margin)}`);
+    if (clippedContext()) {
+      element.dataset.pieceId = featureLayer.feature.properties.piece_id;
+      element.dataset.districtId = featureLayer.feature.properties.district_id;
+    }
+    element.setAttribute('aria-label', `${unitLabel(layer, unit)}${clippedContext() ? ', clipped precinct portion' : ''}: ${marginLabel(currentResult(unit)?.margin)}`);
     element.setAttribute('tabindex', '-1');
     element.setAttribute('role', 'button');
     if (state.unit === unit.id) featureLayer.bringToFront();
@@ -222,6 +251,7 @@ async function render(fit = 'preserve') {
   statusElement.textContent = '';
   statusElement.hidden = true;
   mapElement.dataset.layer = layer;
+  mapElement.dataset.geometry = geometryLayer;
   mapElement.dataset.count = String(visible.length);
   mapElement.dataset.ready = 'true';
   mapElement.setAttribute('aria-label', `${GEOGRAPHIES[layer].plural} map, ${visible.length} areas. Use search for keyboard selection.`);
@@ -300,7 +330,8 @@ function wireControls() {
 
 async function initialize() {
   model = await getJSON('data/model.json');
-  if (!model.units?.precinct || !model.scenarios?.proportional || !model.palette?.Jones) throw new Error('The model data is incomplete.');
+  if (!model.units?.precinct || !model.scenarios?.proportional || !model.palette?.Jones
+    || !model.district_precincts?.house || !model.district_precincts?.senate) throw new Error('The model data is incomplete.');
   state = parseState(model, location.hash);
   publishState(true);
   index = searchIndex(model);

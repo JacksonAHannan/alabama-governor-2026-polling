@@ -11,8 +11,13 @@ This is a published model snapshot, not a live election feed or an automatically
 updated polling average. Statewide polling is matched exactly; demographic
 crosstabs are soft constraints. The substantial age18–29 mismatch is disclosed
 on the page and in `methodology.html`. District counts refer to the governor
-vote, not legislative winners. District drilldown displays whole intersecting
-precincts and discloses the population allocation of split precincts.
+vote, not legislative winners. District drilldown clips precinct shapes to the
+selected House or Senate district. Each candidate's modeled vote weight is
+scaled by the portion's share of the precinct's 2020 block VAP, with no land-area
+weighting. Both candidates use the same fraction, retaining the model's uniform
+within-precinct preference assumption. The pieces sum to the existing district
+totals in both scenarios. Population counts and allocated vote weights are
+shown; historical and demographic percentages are labeled whole-precinct context.
 
 The page needs no server application, API key, map-tile service, or external
 JavaScript/font request. Leaflet and licensed fonts are included locally.
